@@ -1,0 +1,10 @@
+# Ignorar pastas de ambiente virtual e arquivos de cache
+.venv/
+__pycache__/
+*.pyc
+
+# Ignorar o banco de dados (será recriado no setup)
+lixo_eletronico.db
+
+# Ignorar configurações do PyCharm
+.idea/
