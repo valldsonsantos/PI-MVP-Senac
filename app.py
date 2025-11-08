@@ -1,14 +1,12 @@
-# app.py
-
+from flask_cors import CORS
 import sqlite3
-import json
-# Adicionado request aqui, no topo, junto com as outras importações do Flask.
-from flask import Flask, jsonify, abort, request
+from flask import Flask, jsonify, abort, request, g
 
 # --- 1. CONFIGURAÇÃO DA APLICAÇÃO ---
 
 app = Flask(__name__)
-# DATABASE é o nome do arquivo com o script setup_db.py
+# Permite que o Front-end acesse a API (essencial para evitar erro CORS)
+CORS(app)
 DATABASE = 'lixo_eletronico.db'
 
 
@@ -16,15 +14,24 @@ DATABASE = 'lixo_eletronico.db'
 
 def get_db_connection():
     """Cria e retorna a conexão com o banco de dados."""
-    try:
-        conn = sqlite3.connect(DATABASE)
-        # sqlite3.Row permite que o resultado da consulta seja acessado por nome da coluna (como um dicionário)
-        conn.row_factory = sqlite3.Row
-        return conn
-    except sqlite3.Error as e:
-        # Se houver erro de conexão, a API retorna um erro 500
-        print(f"Erro ao conectar ao banco de dados: {e}")
-        abort(500, description="Falha na conexão com o banco de dados.")
+    # O uso de g.db garante que uma única conexão é usada por requisição
+    db = getattr(g, '_database', None)
+    if db is None:
+        try:
+            db = g._database = sqlite3.connect(DATABASE)
+            # Permite que o resultado da consulta seja acessado por nome da coluna (como um dicionário)
+            db.row_factory = sqlite3.Row
+        except sqlite3.Error as e:
+            print(f"Erro ao conectar ao banco de dados: {e}")
+            abort(500, description="Falha na conexão com o banco de dados.")
+    return db
+
+# Fecha a conexão após a requisição
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
 
 
 # --- 3. ROTA DA API: GET /pontos (LEITURA) ---
@@ -32,134 +39,122 @@ def get_db_connection():
 @app.route('/pontos', methods=['GET'])
 def listar_pontos_coleta():
     """
-    Lista todos os pontos de coleta, essencial para a funcionalidade de geolocalização.
+    Lista todos os pontos de coleta (para popular o <select> no Front-end).
     """
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    # 1. Executa a consulta SQL para buscar os dados
-    cursor.execute('SELECT id, nome, endereco, latitude, longitude, horario_func FROM pontos_coleta')
-
-    # 2. Pega todos os resultados (que já estão em formato de Row/dicionário)
+    cursor.execute('SELECT id, nome, endereco, horario_func FROM pontos_coleta')
     pontos_raw = cursor.fetchall()
-
-    # 3. Converte a lista de resultados em uma lista de dicionários padrão Python (JSON serializável)
     pontos_json = [dict(ponto) for ponto in pontos_raw]
 
-    conn.close()  # Sempre feche a conexão
-
-    # 4. Retorna a lista em formato JSON com o código HTTP 200 (OK)
     return jsonify({
         "status": "sucesso",
         "dados": pontos_json
     }), 200
 
 
-# --- 4. ROTA DA API: POST /agendamentos (ESCRITA) ---
+# --- 4. ROTA DA API: POST /agendamentos (ESCRITA) - AJUSTADA ---
 
-# Este bloco foi movido para cá para que o Flask o encontre antes de rodar.
 @app.route('/agendamentos', methods=['POST'])
 def criar_agendamento():
     """
-    Rota para criar um novo agendamento de coleta de lixo eletrônico.
-    Recebe os dados via POST em formato JSON.
+    Rota para criar um novo agendamento.
+    AGORA RECEBE 'ponto_coleta_id' como campo obrigatório.
     """
-    # 1. Tenta obter os dados JSON enviados pelo Front-end (ou Postman/Insomnia)
     dados = request.get_json()
 
-    # 2. Validação básica dos campos obrigatórios
-    campos_obrigatorios = ['usuario_id', 'data_retirada', 'tipo_lixo']
+    # 1. Validação básica dos campos obrigatórios (ponto_coleta_id é NOVO OBRIGATÓRIO)
+    campos_obrigatorios = ['usuario_id', 'data_retirada', 'tipo_lixo', 'endereco_coleta', 'ponto_coleta_id']
 
     if not dados:
-        # Erro 400 Bad Request se não houver JSON
         return jsonify({"status": "erro", "mensagem": "Nenhum dado JSON fornecido."}), 400
 
     for campo in campos_obrigatorios:
         if campo not in dados:
-            # Erro 400 se faltar algum campo essencial
             return jsonify({"status": "erro", "mensagem": f"Campo obrigatório '{campo}' não fornecido."}), 400
 
-    # 3. Extrai os dados
+    # 2. Extrai e trata os dados
     usuario_id = dados['usuario_id']
+    ponto_coleta_id = dados['ponto_coleta_id'] # NOVO CAMPO
     data_retirada = dados['data_retirada']
     tipo_lixo = dados['tipo_lixo']
-
-    # Define o status inicial como 'pendente'
-    status_inicial = 'pendente'
+    endereco_coleta = dados['endereco_coleta']
+    ponto_referencia = dados.get('ponto_referencia', None)
+    status_inicial = 'Pendente'
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
-        # 4. Executa o comando INSERT para salvar no banco
+        # 3. Executa o comando INSERT (COM NOVO CAMPO)
         cursor.execute(
             """
-            INSERT INTO agendamentos (usuario_id, data_retirada, tipo_lixo, status) 
-            VALUES (?, ?, ?, ?)
+            INSERT INTO agendamentos (usuario_id, ponto_coleta_id, data_retirada, tipo_lixo, endereco_coleta, ponto_referencia, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (usuario_id, data_retirada, tipo_lixo, status_inicial)
+            (usuario_id, ponto_coleta_id, data_retirada, tipo_lixo, endereco_coleta, ponto_referencia, status_inicial)
         )
         conn.commit()
 
-        # Pega o ID do último registro inserido para a resposta
+        # 4. Pega o ID do último registro inserido
         novo_id = cursor.lastrowid
-        conn.close()
 
-        # 5. Retorna a confirmação e o ID do novo agendamento
+        # 5. Retorna o objeto do agendamento para o Front-end
         return jsonify({
             "status": "sucesso",
             "mensagem": "Agendamento criado com sucesso!",
-            "id_agendamento": novo_id
-        }), 201  # Código 201 Created (Criado)
+            "id_agendamento": novo_id,
+            "novo_agendamento": {
+                "id": novo_id,
+                "usuario_id": usuario_id,
+                "ponto_coleta_id": ponto_coleta_id, # NOVO CAMPO
+                "data_retirada": data_retirada,
+                "tipo_lixo": tipo_lixo,
+                "endereco_coleta": endereco_coleta,
+                "ponto_referencia": ponto_referencia,
+                "status": status_inicial
+            }
+        }), 201
 
     except sqlite3.IntegrityError as e:
-        # Erro de integridade, como um usuario_id que não existe (FK)
-        conn.close()
-        return jsonify({"status": "erro", "mensagem": f"Erro de integridade ao criar agendamento: {e}"}), 409
+        # Erro de FK: ID de usuário ou ID de ponto de coleta não existe
+        return jsonify({"status": "erro", "mensagem": f"Erro de integridade (ID de usuário ou Ponto de Coleta não existe): {e}"}), 409
 
     except sqlite3.Error as e:
-        # Outros erros de banco de dados
-        conn.close()
         return jsonify({"status": "erro", "mensagem": f"Erro de banco de dados: {e}"}), 500
 
 
-# Continuação do app.py
-
-# --- 5. ROTA DA API: GET /agendamentos (LEITURA DA LISTA) ---
+# --- 5. ROTA DA API: GET /agendamentos (LEITURA DA LISTA) - AJUSTADA ---
 
 @app.route('/agendamentos', methods=['GET'])
 def listar_agendamentos():
     """
-    Lista todos os agendamentos existentes no banco de dados.
-    (Em um sistema real, esta rota seria filtrada por usuário logado ou admin).
+    Lista todos os agendamentos.
+    AGORA FAZ JOIN COM 'pontos_coleta' para retornar o nome da empresa.
     """
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # 1. Executa a consulta SQL para buscar os dados na tabela 'agendamentos'.
-    # Usamos JOIN para trazer o nome do usuário junto, tornando o dado mais útil.
     cursor.execute("""
         SELECT 
             a.id, 
             a.data_retirada, 
-            a.tipo_lixo, 
+            a.tipo_lixo,
+            a.endereco_coleta,       
+            a.ponto_referencia,      
             a.status, 
             u.nome AS nome_usuario, 
-            u.email AS email_usuario
+            u.email AS email_usuario,
+            pc.nome AS nome_ponto_coleta  -- NOVO CAMPO
         FROM agendamentos a
         JOIN usuarios u ON a.usuario_id = u.id
+        LEFT JOIN pontos_coleta pc ON a.ponto_coleta_id = pc.id -- NOVO JOIN
         ORDER BY a.data_retirada DESC
     """)
 
-    # 2. Pega todos os resultados
     agendamentos_raw = cursor.fetchall()
-
-    # 3. Converte para uma lista de dicionários
     agendamentos_json = [dict(agendamento) for agendamento in agendamentos_raw]
 
-    conn.close()  # Sempre feche a conexão
-
-    # 4. Retorna a lista em formato JSON com o código HTTP 200 (OK)
     return jsonify({
         "status": "sucesso",
         "total": len(agendamentos_json),
@@ -167,20 +162,16 @@ def listar_agendamentos():
     }), 200
 
 
-# Continuação do app.py
-
 # --- 6. ROTA DA API: PUT /agendamentos/<id> (ATUALIZAÇÃO) ---
+# A rota PUT (Check) foi mantida e está CORRETA.
 
-# O <id> na rota captura o número do agendamento que será atualizado
 @app.route('/agendamentos/<int:id>', methods=['PUT'])
 def atualizar_agendamento(id):
     """
-    Atualiza o status de um agendamento específico.
-    Ideal para o admin mudar de 'pendente' para 'confirmado' ou 'concluido'.
+    Atualiza o status de um agendamento específico (usado para o botão 'Check').
     """
     dados = request.get_json()
 
-    # 1. Validação: Checar se o campo 'status' foi fornecido
     if not dados or 'status' not in dados:
         return jsonify({"status": "erro", "mensagem": "O campo 'status' é obrigatório para atualização."}), 400
 
@@ -189,7 +180,6 @@ def atualizar_agendamento(id):
     cursor = conn.cursor()
 
     try:
-        # 2. Executa o comando UPDATE no banco
         cursor.execute(
             """
             UPDATE agendamentos 
@@ -200,32 +190,20 @@ def atualizar_agendamento(id):
         )
         conn.commit()
 
-        # 3. Verifica se alguma linha foi realmente atualizada
         if cursor.rowcount == 0:
-            conn.close()
-            # Retorna 404 Not Found se o ID não existir
             return jsonify({"status": "erro", "mensagem": f"Agendamento com ID {id} não encontrado."}), 404
 
-        conn.close()
-
-        # 4. Retorna a confirmação de sucesso
         return jsonify({
             "status": "sucesso",
             "mensagem": f"Status do Agendamento {id} atualizado para '{novo_status}'."
-        }), 200  # Código 200 OK
+        }), 200
 
     except sqlite3.Error as e:
-        conn.close()
         return jsonify({"status": "erro", "mensagem": f"Erro de banco de dados na atualização: {e}"}), 500
 
 
-
-
-
-# --- 5. EXECUÇÃO DA APLICAÇÃO ---
+# --- 7. EXECUÇÃO DA APLICAÇÃO ---
 
 if __name__ == '__main__':
     # Roda o servidor Flask na porta 5000.
-    # host='0.0.0.0' permite acesso de outros IPs (como o front-end).
     app.run(debug=True, host='0.0.0.0', port=5000)
-    # A API estará acessível em: http://127.0.0.1:5000/pontos

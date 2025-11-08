@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento de Coleta | E-Waste Collector</title>
+   <link rel="stylesheet" href="Style.css">
+</head>
+<body>
+    <header>
+        <h1>♻️ Agendamento de Coleta de Lixo Eletrônico</h1>
+    </header>
+
+    <main class="container">
+        <form id="agendamentoForm">
+            <h2>Novo Agendamento</h2>
+
+            <div class="form-group">
+                <label for="usuario_id">Seu ID de Usuário (1-10):</label>
+                <input type="number" id="usuario_id" required value="1">
+            </div>
+
+            <div class="form-group">
+                <label for="tipo_lixo">Tipo de Lixo Eletrônico:</label>
+                <input type="text" id="tipo_lixo" required placeholder="Ex: Geladeira Antiga, Celulares e Baterias">
+            </div>
+
+            <div class="form-group">
+                <label for="data_retirada">Data Preferencial para Retirada:</label>
+                <input type="date" id="data_retirada" required>
+            </div>
+
+            <div class="form-group">
+                <label for="ponto_coleta_id">Escolha a Empresa para Retirada:</label>
+                <select id="ponto_coleta_id" required>
+                    <option value="">Carregando empresas...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="endereco_coleta">Endereço de Coleta (Rua, Número, Bairro):</label>
+                <input type="text" id="endereco_coleta" required placeholder="Ex: Av. Paulista, 1000, Bela Vista">
+            </div>
+
+            <div class="form-group">
+                <label for="ponto_referencia">Ponto de Referência (Opcional):</label>
+                <input type="text" id="ponto_referencia" placeholder="Ex: Prédio Azul em frente à padaria">
+            </div>
+
+            <button type="submit" id="submitBtn">Agendar Coleta</button>
+        </form>
+
+        <div id="mensagem"></div>
+
+        <section class="agendamentos-container">
+            <h2>Meus Agendamentos</h2>
+            <div class="accordion">
+                <div class="accordion-item">
+                    <button class="accordion-header active" onclick="toggleAccordion(this)">
+                        Agendamentos Pendentes (<span id="count-pendentes">0</span>)
+                    </button>
+                    <div class="accordion-content open">
+                        <ul id="agendamentos-pendentes-list" class="agendamentos-list">
+                            <li>Carregando...</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button class="accordion-header" onclick="toggleAccordion(this)">
+                        Agendamentos Concluídos/Confirmados (<span id="count-confirmados">0</span>)
+                    </button>
+                    <div class="accordion-content">
+                        <ul id="agendamentos-confirmados-list" class="agendamentos-list">
+                            <li>Carregando...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <script>
+            function toggleAccordion(header) {
+                const content = header.nextElementSibling;
+                const isActive = header.classList.toggle('active');
+
+                if (isActive) {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    content.classList.add('open');
+                } else {
+                    content.style.maxHeight = null;
+                    content.classList.remove('open');
+                }
+            }
+        </script>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,10 +1,14 @@
-# Ignorar pastas de ambiente virtual e arquivos de cache
+# Arquivos de ambiente virtual e cache (essenciais)
 .venv/
 __pycache__/
 *.pyc
+*.env
 
-# Ignorar o banco de dados (será recriado no setup)
+# Banco de dados (essencial)
 lixo_eletronico.db
 
-# Ignorar configurações do PyCharm
+# Pastas de IDEs (essenciais)
 .idea/
+
+# Windows
+Thumbs.db

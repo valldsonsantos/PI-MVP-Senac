@@ -1,0 +1,227 @@
+/* style.css - Folha de Estilos */
+
+/* Configurações Básicas */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f7f6;
+    color: #333;
+}
+
+header {
+    background-color: #2c3e50; /* Azul escuro */
+    color: white;
+    padding: 20px 0;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.container {
+    width: 90%;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+/* --- Estilo do Formulário --- */
+
+#agendamentoForm {
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+}
+
+#agendamentoForm h2 {
+    color: #2980b9; /* Azul claro */
+    margin-top: 0;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #34495e;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="date"],
+.form-group select { /* NOVO: Estiliza o Select */
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 16px;
+    background-color: #f9f9f9;
+}
+
+button[type="submit"] {
+    background-color: #2ecc71; /* Verde */
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+    width: 100%;
+    margin-top: 10px;
+}
+
+button[type="submit"]:hover {
+    background-color: #27ae60;
+}
+
+/* --- Estilo das Mensagens (Sucesso/Erro) --- */
+
+#mensagem {
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    display: none;
+    font-weight: bold;
+    text-align: center;
+}
+
+#mensagem.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+#mensagem.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* --- Estilo do Acordeão (Listas de Agendamento) --- */
+
+.agendamentos-container h2 {
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+}
+
+.accordion-header {
+    background-color: #3498db; /* Azul vibrante */
+    color: white;
+    cursor: pointer;
+    padding: 15px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    font-size: 18px;
+    transition: background-color 0.3s, border-radius 0.3s;
+    margin-top: 5px;
+}
+
+.accordion-header:hover {
+    background-color: #2980b9;
+}
+
+.accordion-header.active {
+    background-color: #2980b9;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.accordion-header span {
+    font-weight: bold;
+    padding: 0 5px;
+}
+
+.accordion-content {
+    background-color: #fcfcfc;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    max-height: 0; /* Padrão fechado */
+    border: 1px solid #eee;
+    border-top: none;
+    padding: 0 15px;
+}
+
+.accordion-content.open {
+    padding: 15px;
+}
+
+/* --- Estilo da Lista de Agendamentos --- */
+
+.agendamentos-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.agendamentos-list li {
+    background-color: #ffffff;
+    border: 1px solid #ecf0f1;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    line-height: 1.5;
+}
+
+.agendamentos-list li strong {
+    color: #34495e;
+}
+
+/* Estilos de Status */
+.status-pendente {
+    background-color: #f39c12; /* Laranja */
+    color: white;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.status-confirmado {
+    background-color: #2ecc71; /* Verde */
+    color: white;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    font-weight: bold;
+    display: inline-block;
+}
+
+/* --- Estilo do Botão de Ação (Check) --- */
+
+.actions {
+    margin-top: 15px;
+    border-top: 1px dashed #ccc;
+    padding-top: 10px;
+    text-align: right; /* Alinha o botão à direita */
+}
+
+.check-button {
+    background-color: #28a745; /* Verde */
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    font-size: 14px;
+}
+
+.check-button:hover {
+    background-color: #218838;
+}
